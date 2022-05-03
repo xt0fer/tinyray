@@ -15,20 +15,22 @@ const (
 	height = 768
 )
 
-func render() {
+func render(sphere vector.Sphere) {
 	log.Printf("render size(%d)\n", width*height)
 	framebuffer := [height * width]vector.Vector{}
+	fov := math.Pi / 2.0
 
-	for i := 0; i < width; i++ {
-		for j := 0; j < height; j++ {
-			framebuffer[i*height+j] = vector.Vector{
-				X: float64(j) / float64(width),
-				Y: float64(i) / float64(height),
-				Z: 0,
-			}
-			// if framebuffer[i*height+j].X > 1.0 ||  framebuffer[i*height+j].Y > 1.0{
-			// 	log.Println("GREATER THAN 1", i, j)
+	for j := 0; j < height; j++ {
+		for i := 0; i < width; i++ {
+			// framebuffer[i*height+j] = vector.Vector{
+			// 	X: float64(j) / float64(width),
+			// 	Y: float64(i) / float64(height),
+			// 	Z: 0,
 			// }
+			x := float64((2*(float64(i)+0.5)/width - 1) * math.Tan(fov/2.) * width / height)
+			y := -(2*(float64(j)+0.5)/height - 1) * math.Tan(fov/2.)
+			dir := vector.Vector{x, y, -1}.Normalize()
+			framebuffer[i+j*width] = vector.CastRay(vector.Vector{0, 0, 0}, dir, sphere)
 		}
 	}
 

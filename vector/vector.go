@@ -7,6 +7,12 @@ type Vector struct {
 	X, Y, Z float64
 }
 
+// float operator*(const vec3& v) const { return x*v.x + y*v.y + z*v.z; }
+// vec3  operator-()              const { return {-x, -y, -z};          }
+// float norm() const { return std::sqrt(x*x+y*y+z*z); }
+
+// vec3  operator+(const vec3& v) const { return {x+v.x, y+v.y, z+v.z}; }
+
 func (a Vector) Add(b Vector) Vector {
 	return Vector{
 		X: a.X + b.X,
@@ -14,6 +20,8 @@ func (a Vector) Add(b Vector) Vector {
 		Z: a.Z + b.Z,
 	}
 }
+
+// vec3  operator-(const vec3& v) const { return {x-v.x, y-v.y, z-v.z}; }
 
 func (a Vector) Sub(b Vector) Vector {
 	return Vector{
@@ -23,12 +31,19 @@ func (a Vector) Sub(b Vector) Vector {
 	}
 }
 
+// vec3  operator*(const float v) const { return {x*v, y*v, z*v};       }
+
 func (a Vector) MulS(s float64) Vector {
 	return Vector{
 		X: a.X * s,
 		Y: a.Y * s,
 		Z: a.Z * s,
 	}
+}
+
+// float operator*(const vec3& v) const { return x*v.x + y*v.y + z*v.z; }
+func (a Vector) Mul(b Vector) float64 {
+	return a.X*b.X + a.Y*b.Y + a.Z*b.Z
 }
 
 func (a Vector) Dot(b Vector) float64 {
@@ -39,6 +54,11 @@ func (a Vector) Length() float64 {
 	return math.Sqrt(a.Dot(a))
 }
 
+// float norm() const { return std::sqrt(x*x+y*y+z*z); }
+func (a Vector) Norm() float64 {
+	return a.Dot(a)
+}
+
 func (a Vector) Cross(b Vector) Vector {
 	return Vector{
 		X: a.Y*b.Z - a.Z*b.Y,
@@ -47,6 +67,40 @@ func (a Vector) Cross(b Vector) Vector {
 	}
 }
 
+// vec3 normalized() const { return (*this)*(1.f/norm()); }
+
 func (a Vector) Normalize() Vector {
 	return a.MulS(1. / a.Length())
+}
+
+type Sphere struct {
+	Center Vector
+	Radius float64
+}
+
+func (s *Sphere) RayIntersect(orig Vector, dir Vector, t0 float64) bool {
+	L := s.Center.Sub(orig)
+	tca := L.Mul(dir)
+	d2 := L.Mul(L) - tca*tca
+	if d2 > s.Radius*s.Radius {
+		return false
+	}
+	thc := math.Sqrt(s.Radius*s.Radius - d2)
+	t0 = tca - thc
+	t1 := tca + thc
+	if t0 < 0 {
+		t0 = t1
+	}
+	if t0 < 0 {
+		return false
+	}
+	return true
+}
+
+func CastRay(orig Vector, dir Vector, sphere Sphere) Vector {
+	sphere_dist := math.MaxFloat64
+	if !sphere.RayIntersect(orig, dir, sphere_dist) {
+		return Vector{X: 0.2, Y: 0.7, Z: 0.8} // background color
+	}
+	return Vector{X: 0.4, Y: 0.4, Z: 0.3}
 }
