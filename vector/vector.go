@@ -73,12 +73,17 @@ func (a Vector) Normalize() Vector {
 	return a.MulS(1. / a.Length())
 }
 
-type Sphere struct {
-	Center Vector
-	Radius float64
+type Material struct {
+	DiffuseColor Vector
 }
 
-func (s *Sphere) RayIntersect(orig Vector, dir Vector, t0 float64) bool {
+type Sphere struct {
+	Center   Vector
+	Radius   float64
+	Material Material
+}
+
+func (s *Sphere) RayIntersect(orig Vector, dir Vector, t0 *float64) bool {
 	L := s.Center.Sub(orig)
 	tca := L.Mul(dir)
 	d2 := L.Mul(L) - tca*tca
@@ -86,21 +91,49 @@ func (s *Sphere) RayIntersect(orig Vector, dir Vector, t0 float64) bool {
 		return false
 	}
 	thc := math.Sqrt(s.Radius*s.Radius - d2)
-	t0 = tca - thc
+	*t0 = tca - thc
 	t1 := tca + thc
-	if t0 < 0 {
-		t0 = t1
+	if *t0 < 0 {
+		*t0 = t1
 	}
-	if t0 < 0 {
+	if *t0 < 0 {
 		return false
 	}
 	return true
 }
 
-func CastRay(orig Vector, dir Vector, sphere Sphere) Vector {
-	sphere_dist := math.MaxFloat64
-	if !sphere.RayIntersect(orig, dir, sphere_dist) {
+func SceneIntersect(orig Vector, dir Vector, spheres []Sphere, hit *Vector, N *Vector, material *Material) bool {
+	spheres_dist := math.MaxFloat64
+	for i := 0; i < len(spheres); i++ {
+		var distI float64 = 0.0
+		if spheres[i].RayIntersect(orig, dir, &distI) && distI < spheres_dist {
+			spheres_dist = distI
+			*hit = orig.Add(dir).MulS(distI)
+			*N = (hit.Sub(spheres[i].Center)).Normalize()
+			*material = spheres[i].Material
+		}
+	}
+	return spheres_dist < 1000
+}
+
+func CastRay(orig Vector, dir Vector, spheres []Sphere, lights []Light) Vector {
+	point := Vector{0, 0, 0}
+	N := Vector{0, 0, 0}
+	material := Material{}
+
+	if !SceneIntersect(orig, dir, spheres, &point, &N, &material) {
 		return Vector{X: 0.2, Y: 0.7, Z: 0.8} // background color
 	}
-	return Vector{X: 0.4, Y: 0.4, Z: 0.3}
+	//return material.DiffuseColor
+	var diffuseLightIntensity float64 = 0.0
+	for i := 0; i < len(lights); i++ {
+		light_dir := lights[i].Position.Sub(point).Normalize()
+		diffuseLightIntensity += lights[i].Intensity * math.Max(0, light_dir.Mul(N))
+	}
+	return material.DiffuseColor.MulS(diffuseLightIntensity)
+}
+
+type Light struct {
+	Position  Vector
+	Intensity float64
 }

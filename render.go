@@ -15,7 +15,7 @@ const (
 	height = 768
 )
 
-func render(sphere vector.Sphere) {
+func render(spheres []vector.Sphere, lights []vector.Light) {
 	log.Printf("render size(%d)\n", width*height)
 	framebuffer := [width * height]vector.Vector{}
 	fov := math.Pi / 2.0
@@ -29,8 +29,8 @@ func render(sphere vector.Sphere) {
 			// }
 			x := float64((2*(float64(i)+0.5)/width - 1) * math.Tan(fov/2.) * width / height)
 			y := -(2*(float64(j)+0.5)/height - 1) * math.Tan(fov/2.)
-			dir := vector.Vector{x, y, -1}.Normalize()
-			framebuffer[i+j*width] = vector.CastRay(vector.Vector{0, 0, 0}, dir, sphere)
+			dir := vector.Vector{X: x, Y: y, Z: -1}.Normalize()
+			framebuffer[i+j*width] = vector.CastRay(vector.Vector{X: 0, Y: 0, Z: 0}, dir, spheres, lights)
 		}
 	}
 
