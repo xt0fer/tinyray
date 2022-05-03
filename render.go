@@ -38,6 +38,10 @@ func render(spheres []vector.Sphere, lights []vector.Light) {
 
 	scene.EachPixel(func(x, y int) color.RGBA {
 		vec := framebuffer[x+y*width]
+		max := math.Max(vec.X, math.Max(vec.Y, vec.Z))
+		if max > 1 {
+			vec = vec.MulS(1.0 / max)
+		}
 		return color.RGBA{
 			uint8(math.Round(vec.X * 255.0)),
 			uint8(math.Round(vec.Y * 255.0)),

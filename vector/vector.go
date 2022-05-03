@@ -74,7 +74,9 @@ func (a Vector) Normalize() Vector {
 }
 
 type Material struct {
+	Albedo       [2]float64
 	DiffuseColor Vector
+	SpecularExp  float64
 }
 
 type Sphere struct {
@@ -126,14 +128,25 @@ func CastRay(orig Vector, dir Vector, spheres []Sphere, lights []Light) Vector {
 	}
 	//return material.DiffuseColor
 	var diffuseLightIntensity float64 = 0.0
+	var specularLightIntensity float64 = 0.0
+
 	for i := 0; i < len(lights); i++ {
 		light_dir := lights[i].Position.Sub(point).Normalize()
 		diffuseLightIntensity += lights[i].Intensity * math.Max(0, light_dir.Mul(N))
+		// specular_light_intensity += powf(std::max(0.f, -reflect(-light_dir, N)*dir), material.specular_exponent)*lights[i].intensity;
+		specularLightIntensity += math.Pow(math.Max(0.0, Reflect(light_dir, N).Mul(dir)),
+			material.SpecularExp) * lights[i].Intensity
 	}
-	return material.DiffuseColor.MulS(diffuseLightIntensity)
+	// * material.albedo[0] + Vec3f(1., 1., 1.)*specular_light_intensity * material.albedo[1];
+	return material.DiffuseColor.MulS(diffuseLightIntensity).MulS(material.Albedo[0]).Add(
+		Vector{X: 1, Y: 1, Z: 1}.MulS(specularLightIntensity * material.Albedo[1]))
 }
 
 type Light struct {
 	Position  Vector
 	Intensity float64
+}
+
+func Reflect(I Vector, N Vector) Vector {
+	return I.Sub(N.MulS(2.0 * I.Mul(N)))
 }
