@@ -74,7 +74,7 @@ func (a Vector) Normalize() Vector {
 }
 
 type Material struct {
-	Albedo       [2]float64
+	Albedo       Vector
 	DiffuseColor Vector
 	SpecularExp  float64
 }
@@ -118,14 +118,25 @@ func SceneIntersect(orig Vector, dir Vector, spheres []Sphere, hit *Vector, N *V
 	return spheres_dist < 1000
 }
 
-func CastRay(orig Vector, dir Vector, spheres []Sphere, lights []Light) Vector {
+func CastRay(orig Vector, dir Vector, spheres []Sphere, lights []Light, depth int) Vector {
 	point := Vector{0, 0, 0}
 	N := Vector{0, 0, 0}
 	material := Material{}
 
-	if !SceneIntersect(orig, dir, spheres, &point, &N, &material) {
+	if depth > 4 || !SceneIntersect(orig, dir, spheres, &point, &N, &material) {
 		return Vector{X: 0.2, Y: 0.7, Z: 0.8} // background color
 	}
+
+	reflect_dir := Reflect(dir, N).Normalize()
+	reflect_orig := Vector{0, 0, 0}
+	if reflect_dir.Mul(N) < 0 {
+		reflect_orig = point.Sub(N.MulS(1e-3))
+	} else {
+		reflect_orig = point.Add(N.MulS(1e-3))
+	}
+	//Vec3f reflect_color = cast_ray(reflect_orig, reflect_dir, spheres, lights, depth + 1);
+	reflect_color := CastRay(reflect_orig, reflect_dir, spheres, lights, depth+1)
+
 	//return material.DiffuseColor
 	var diffuseLightIntensity float64 = 0.0
 	var specularLightIntensity float64 = 0.0
@@ -155,9 +166,14 @@ func CastRay(orig Vector, dir Vector, spheres []Sphere, lights []Light) Vector {
 			material.SpecularExp) * lights[i].Intensity
 	}
 	// * material.albedo[0] + Vec3f(1., 1., 1.)*specular_light_intensity * material.albedo[1];
-	return material.DiffuseColor.MulS(diffuseLightIntensity).MulS(material.Albedo[0]).Add(
-		Vector{X: 1, Y: 1, Z: 1}.MulS(specularLightIntensity * material.Albedo[1]))
+	return material.DiffuseColor.MulS(diffuseLightIntensity).MulS(material.Albedo.X).Add(
+		Vector{X: 1, Y: 1, Z: 1}.MulS(specularLightIntensity * material.Albedo.Y).Add(
+			reflect_color.MulS(material.Albedo.Z)))
 }
+
+//      return material.diffuse_color * diffuse_light_intensity * material.albedo[0]
+// + Vec3f(1., 1., 1.)*specular_light_intensity * material.albedo[1]
+// + reflect_color*material.albedo[2];
 
 type Light struct {
 	Position  Vector
