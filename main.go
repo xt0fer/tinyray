@@ -41,7 +41,7 @@ func main() {
 		Radius:   2,
 		Material: ivory,
 	}
-	// spheres.push_back(Sphere(Vec3f(-1.0, -1.5, -12), 2, red_rubber));
+	// spheres.push_back(Sphere(Vec3f(-1.0, -2.0, -12), 2, red_rubber));
 	spheres[2] = vector.Sphere{
 		Center:   vector.Vector{X: -1.0, Y: -1.5, Z: -12.0},
 		Radius:   2,
@@ -49,7 +49,7 @@ func main() {
 	}
 	// spheres.push_back(Sphere(Vec3f( 1.5, -0.5, -18), 3, red_rubber));
 	spheres[1] = vector.Sphere{
-		Center:   vector.Vector{X: -1.5, Y: -0.5, Z: -18.0},
+		Center:   vector.Vector{X: 1.5, Y: -0.5, Z: -18.0},
 		Radius:   3,
 		Material: redrubber,
 	}

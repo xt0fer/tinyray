@@ -132,6 +132,23 @@ func CastRay(orig Vector, dir Vector, spheres []Sphere, lights []Light) Vector {
 
 	for i := 0; i < len(lights); i++ {
 		light_dir := lights[i].Position.Sub(point).Normalize()
+		light_distance := lights[i].Position.Sub(point).Norm()
+
+		shadow_orig := Vector{0, 0, 0}
+		if light_dir.Mul(N) < 0 {
+			shadow_orig = point.Sub(N.MulS(1e-3))
+		} else {
+			shadow_orig = point.Add(N.MulS(1e-3))
+		}
+		// checking if the point lies in the shadow of the lights[i]
+
+		shadow_pt := Vector{0, 0, 0}
+		shadow_N := Vector{0, 0, 0}
+
+		tmpmaterial := Material{}
+		if SceneIntersect(shadow_orig, light_dir, spheres, &shadow_pt, &shadow_N, &tmpmaterial) && (shadow_pt.Sub(shadow_orig)).Norm() < light_distance {
+			continue
+		}
 		diffuseLightIntensity += lights[i].Intensity * math.Max(0, light_dir.Mul(N))
 		// specular_light_intensity += powf(std::max(0.f, -reflect(-light_dir, N)*dir), material.specular_exponent)*lights[i].intensity;
 		specularLightIntensity += math.Pow(math.Max(0.0, Reflect(light_dir, N).Mul(dir)),
