@@ -6,9 +6,13 @@ import "math"
 type Vector struct {
 	X, Y, Z float64
 }
+type V4 struct {
+	X, Y, Z, A float64
+}
 
 type Material struct {
-	Albedo       Vector
+	RefractIdx   float64
+	Albedo       V4
 	DiffuseColor Vector
 	SpecularExp  float64
 }
@@ -57,10 +61,12 @@ func (a Vector) MulS(s float64) Vector {
 		Z: a.Z * s,
 	}
 }
-
-// float operator*(const vec3& v) const { return x*v.x + y*v.y + z*v.z; }
-func (a Vector) Mul(b Vector) float64 {
-	return a.X*b.X + a.Y*b.Y + a.Z*b.Z
+func (a Vector) Neg() Vector {
+	return Vector{
+		X: -a.X,
+		Y: -a.Y,
+		Z: -a.Z,
+	}
 }
 
 func (a Vector) Dot(b Vector) float64 {
@@ -92,8 +98,8 @@ func (a Vector) Normalize() Vector {
 
 func (s *Sphere) RayIntersect(orig Vector, dir Vector, t0 *float64) bool {
 	L := s.Center.Sub(orig)
-	tca := L.Mul(dir)
-	d2 := L.Mul(L) - tca*tca
+	tca := L.Dot(dir)
+	d2 := L.Dot(L) - tca*tca
 	if d2 > s.Radius*s.Radius {
 		return false
 	}
@@ -120,27 +126,59 @@ func SceneIntersect(orig Vector, dir Vector, spheres []Sphere, hit *Vector, N *V
 			*material = spheres[i].Material
 		}
 	}
-	return spheres_dist < 1000
+	//return spheres_dist < 1000
+
+	checkerboard_dist := math.MaxFloat64
+	if math.Abs(dir.Y) > 1e-3 {
+		d := -(orig.Y + 4) / dir.Y // the checkerboard plane has equation y = -4
+		pt := orig.Add(dir.MulS(d))
+		if d > 0 && math.Abs(pt.X) < 10 && pt.Z < -10.0 && pt.Z > -30.0 && d < spheres_dist {
+			checkerboard_dist = d
+			*hit = pt
+			*N = Vector{X: 0, Y: 1, Z: 0}
+			if (int(0.5*hit.X+1000)+int(0.5*hit.Z))&1 == 1 {
+				material.DiffuseColor = Vector{X: 0.3, Y: 0.3, Z: 0.3}
+			} else {
+				material.DiffuseColor = Vector{X: 0.3, Y: 0.2, Z: 0.1}
+			}
+		}
+	}
+	return math.Min(spheres_dist, checkerboard_dist) < 1000
+
 }
 
 func CastRay(orig Vector, dir Vector, spheres []Sphere, lights []Light, depth int) Vector {
 	point := Vector{0, 0, 0}
 	N := Vector{0, 0, 0}
-	material := Material{}
+	material := Material{
+		RefractIdx:   1.0,
+		Albedo:       V4{X: 1.0, Y: 0, Z: 0, A: 0},
+		DiffuseColor: Vector{X: 0.0, Y: 0, Z: 0},
+		SpecularExp:  0.0,
+	}
 
-	if depth > 8 || !SceneIntersect(orig, dir, spheres, &point, &N, &material) {
+	if depth > 4 || !SceneIntersect(orig, dir, spheres, &point, &N, &material) {
 		return Vector{X: 0.2, Y: 0.7, Z: 0.8} // background color
 	}
 
 	reflect_dir := Reflect(dir, N).Normalize()
+	refract_dir := Refract(dir, N, material.RefractIdx, 1.0).Normalize()
+
 	reflect_orig := Vector{0, 0, 0}
-	if reflect_dir.Mul(N) < 0 {
+	if reflect_dir.Dot(N) < 0 {
 		reflect_orig = point.Sub(N.MulS(1e-3))
 	} else {
 		reflect_orig = point.Add(N.MulS(1e-3))
 	}
+	refract_orig := Vector{0, 0, 0}
+	if reflect_dir.Dot(N) < 0 {
+		refract_orig = point.Sub(N.MulS(1e-3))
+	} else {
+		refract_orig = point.Add(N.MulS(1e-3))
+	}
 	//Vec3f reflect_color = cast_ray(reflect_orig, reflect_dir, spheres, lights, depth + 1);
 	reflect_color := CastRay(reflect_orig, reflect_dir, spheres, lights, depth+1)
+	refract_color := CastRay(refract_orig, refract_dir, spheres, lights, depth+1)
 
 	//return material.DiffuseColor
 	var diffuseLightIntensity float64 = 0.0
@@ -151,7 +189,7 @@ func CastRay(orig Vector, dir Vector, spheres []Sphere, lights []Light, depth in
 		light_distance := lights[i].Position.Sub(point).Norm()
 
 		shadow_orig := Vector{0, 0, 0}
-		if light_dir.Mul(N) < 0 {
+		if light_dir.Dot(N) < 0 {
 			shadow_orig = point.Sub(N.MulS(1e-3))
 		} else {
 			shadow_orig = point.Add(N.MulS(1e-3))
@@ -165,21 +203,39 @@ func CastRay(orig Vector, dir Vector, spheres []Sphere, lights []Light, depth in
 		if SceneIntersect(shadow_orig, light_dir, spheres, &shadow_pt, &shadow_N, &tmpmaterial) && (shadow_pt.Sub(shadow_orig)).Norm() < light_distance {
 			continue
 		}
-		diffuseLightIntensity += lights[i].Intensity * math.Max(0, light_dir.Mul(N))
+		diffuseLightIntensity += lights[i].Intensity * math.Max(0, light_dir.Dot(N))
 		// specular_light_intensity += powf(std::max(0.f, -reflect(-light_dir, N)*dir), material.specular_exponent)*lights[i].intensity;
-		specularLightIntensity += math.Pow(math.Max(0.0, Reflect(light_dir, N).Mul(dir)),
+		specularLightIntensity += math.Pow(math.Max(0.0, Reflect(light_dir, N).Dot(dir)),
 			material.SpecularExp) * lights[i].Intensity
 	}
-	// * material.albedo[0] + Vec3f(1., 1., 1.)*specular_light_intensity * material.albedo[1];
-	return material.DiffuseColor.MulS(diffuseLightIntensity).MulS(material.Albedo.X).Add(
-		Vector{X: 1, Y: 1, Z: 1}.MulS(specularLightIntensity * material.Albedo.Y).Add(
-			reflect_color.MulS(material.Albedo.Z)))
+
+	//      return material.diffuse_color * diffuse_light_intensity * material.albedo[0] + Vec3f(1., 1., 1.)*specular_light_intensity * material.albedo[1] + reflect_color*material.albedo[2] + refract_color*material.albedo[3];
+	tcolor := material.DiffuseColor.MulS(diffuseLightIntensity).MulS(material.Albedo.X)
+	tcolor = tcolor.Add(Vector{X: 1, Y: 1, Z: 1}.MulS(specularLightIntensity * material.Albedo.Y))
+	tcolor = tcolor.Add(reflect_color.MulS(material.Albedo.Z))
+	tcolor = tcolor.Add(refract_color.MulS(material.Albedo.A))
+	return tcolor
+	// return material.DiffuseColor.MulS(diffuseLightIntensity).MulS(material.Albedo.X).Add(
+	// 	Vector{X: 1, Y: 1, Z: 1}.MulS(specularLightIntensity * material.Albedo.Y).Add(
+	// 		reflect_color.MulS(material.Albedo.Z)))
 }
 
-//      return material.diffuse_color * diffuse_light_intensity * material.albedo[0]
-// + Vec3f(1., 1., 1.)*specular_light_intensity * material.albedo[1]
-// + reflect_color*material.albedo[2];
-
 func Reflect(I Vector, N Vector) Vector {
-	return I.Sub(N.MulS(2.0 * I.Mul(N)))
+	return I.Sub(N.MulS(2.0 * I.Dot(N)))
+}
+
+func Refract(I Vector, N Vector, eta_t float64, eta_i float64) Vector { // Snell's law
+	cosi := -math.Max(-1.0, math.Min(1.0, I.Dot(N)))
+
+	if cosi < 0 {
+		return Refract(I, N.Neg(), eta_i, eta_t)
+	} // if the ray comes from the inside the object, swap the air and the media
+	eta := eta_i / eta_t
+
+	k := 1 - eta*eta*(1-cosi*cosi)
+	tmpk := Vector{1, 0, 0}
+	if k >= 0 {
+		tmpk = I.MulS(eta).Add(N.MulS((eta*cosi - math.Sqrt(k))))
+	}
+	return tmpk
 }

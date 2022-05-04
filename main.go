@@ -82,20 +82,30 @@ func main() {
 	}
 
 	ivory := vector.Material{
-		Albedo:       vector.Vector{X: 0.6, Y: 0.3, Z: 0.1},
+		RefractIdx:   1.0,
+		Albedo:       vector.V4{X: 0.6, Y: 0.3, Z: 0.1, A: 0.0},
 		DiffuseColor: vector.Vector{X: 0.4, Y: 0.4, Z: 0.3},
 		SpecularExp:  50.0,
 	}
 	redrubber := vector.Material{
-		Albedo:       vector.Vector{X: 0.9, Y: 0.1, Z: 0.0},
+		RefractIdx:   1.0,
+		Albedo:       vector.V4{X: 0.9, Y: 0.1, Z: 0.0, A: 0.0},
 		DiffuseColor: vector.Vector{X: 0.3, Y: 0.1, Z: 0.1},
 		SpecularExp:  10.0,
 	}
 	// mirror(Vec3f(0.0, 10.0, 0.8), Vec3f(1.0, 1.0, 1.0), 1425.);
 	mirror := vector.Material{
-		Albedo:       vector.Vector{X: 0.0, Y: 10.0, Z: 0.8},
+		RefractIdx:   1.0,
+		Albedo:       vector.V4{X: 0.0, Y: 10.0, Z: 0.8, A: 0.0},
 		DiffuseColor: vector.Vector{X: 1.0, Y: 1.0, Z: 1.0},
 		SpecularExp:  1425.0,
+	}
+	// glass(1.5, Vec4f(0.0,  0.5, 0.1, 0.8), Vec3f(0.6, 0.7, 0.8),  125.);
+	glass := vector.Material{
+		RefractIdx:   1.5,
+		Albedo:       vector.V4{X: 0.0, Y: 0.5, Z: 0.1, A: 0.8},
+		DiffuseColor: vector.Vector{X: 0.6, Y: 0.7, Z: 0.8},
+		SpecularExp:  125.0, //1425.0,
 	}
 
 	// spheres.push_back(Sphere(Vec3f(-3,    0,   -16), 2,      ivory));
@@ -104,11 +114,11 @@ func main() {
 		Radius:   2,
 		Material: ivory,
 	}
-	// spheres.push_back(Sphere(Vec3f(-1.0, -2.0, -12), 2, mirror));
+	// spheres.push_back(Sphere(Vec3f(-1.0, -2.0, -12), 2, glass));
 	spheres[2] = vector.Sphere{
 		Center:   vector.Vector{X: -1.0, Y: -1.5, Z: -12.0},
 		Radius:   2,
-		Material: mirror,
+		Material: glass,
 	}
 	// spheres.push_back(Sphere(Vec3f( 1.5, -0.5, -18), 3, red_rubber));
 	spheres[1] = vector.Sphere{
