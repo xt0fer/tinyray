@@ -27,10 +27,15 @@ func render(spheres []vector.Sphere, lights []vector.Light) {
 			// 	Y: float64(i) / float64(width),
 			// 	Z: 0.0,
 			// }
-			x := float64((2*(float64(i)+0.5)/width - 1) * math.Tan(fov/2.) * width / height)
-			y := -(2*(float64(j)+0.5)/height - 1) * math.Tan(fov/2.)
-			dir := vector.Vector{X: x, Y: y, Z: -1}.Normalize()
-			framebuffer[i+j*width] = vector.CastRay(vector.Vector{X: 0, Y: 0, Z: 0}, dir, spheres, lights, 0)
+			// x := float64((2*(float64(i)+0.5)/width - 1) * math.Tan(fov/2.) * width / height)
+			// y := -(2*(float64(j)+0.5)/height - 1) * math.Tan(fov/2.)
+			// dir := vector.Vector{X: x, Y: y, Z: -1}.Normalize()
+			// framebuffer[i+j*width] = vector.CastRay(vector.Vector{X: 0, Y: 0, Z: 0}, dir, spheres, lights, 0)
+			dir_x := (float64(i) + 0.5) - width/2.
+			dir_y := -(float64(j) + 0.5) + height/2. // this flips the image at the same time
+			dir_z := -height / (2. * math.Tan(fov/2.))
+			framebuffer[i+j*width] = vector.CastRay(vector.Vector{X: 0, Y: 0, Z: 0},
+				vector.Vector{X: dir_x, Y: dir_y, Z: dir_z}.Normalize(), spheres, lights, 0)
 		}
 	}
 

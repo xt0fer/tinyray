@@ -7,6 +7,23 @@ type Vector struct {
 	X, Y, Z float64
 }
 
+type Material struct {
+	Albedo       Vector
+	DiffuseColor Vector
+	SpecularExp  float64
+}
+
+type Sphere struct {
+	Center   Vector
+	Radius   float64
+	Material Material
+}
+
+type Light struct {
+	Position  Vector
+	Intensity float64
+}
+
 // float operator*(const vec3& v) const { return x*v.x + y*v.y + z*v.z; }
 // vec3  operator-()              const { return {-x, -y, -z};          }
 // float norm() const { return std::sqrt(x*x+y*y+z*z); }
@@ -73,18 +90,6 @@ func (a Vector) Normalize() Vector {
 	return a.MulS(1. / a.Length())
 }
 
-type Material struct {
-	Albedo       Vector
-	DiffuseColor Vector
-	SpecularExp  float64
-}
-
-type Sphere struct {
-	Center   Vector
-	Radius   float64
-	Material Material
-}
-
 func (s *Sphere) RayIntersect(orig Vector, dir Vector, t0 *float64) bool {
 	L := s.Center.Sub(orig)
 	tca := L.Mul(dir)
@@ -123,7 +128,7 @@ func CastRay(orig Vector, dir Vector, spheres []Sphere, lights []Light, depth in
 	N := Vector{0, 0, 0}
 	material := Material{}
 
-	if depth > 4 || !SceneIntersect(orig, dir, spheres, &point, &N, &material) {
+	if depth > 8 || !SceneIntersect(orig, dir, spheres, &point, &N, &material) {
 		return Vector{X: 0.2, Y: 0.7, Z: 0.8} // background color
 	}
 
@@ -174,11 +179,6 @@ func CastRay(orig Vector, dir Vector, spheres []Sphere, lights []Light, depth in
 //      return material.diffuse_color * diffuse_light_intensity * material.albedo[0]
 // + Vec3f(1., 1., 1.)*specular_light_intensity * material.albedo[1]
 // + reflect_color*material.albedo[2];
-
-type Light struct {
-	Position  Vector
-	Intensity float64
-}
 
 func Reflect(I Vector, N Vector) Vector {
 	return I.Sub(N.MulS(2.0 * I.Mul(N)))
