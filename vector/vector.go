@@ -152,7 +152,7 @@ func CastRay(orig Vector, dir Vector, spheres []Sphere, lights []Light, depth in
 
 	material := Material{
 		RefractIdx:   1.0,
-		Albedo:       V4{X: 1.0, Y: 0, Z: 0, A: 0},
+		Albedo:       V4{X: 2.0, Y: 0, Z: 0, A: 0},
 		DiffuseColor: Vector{X: 0.0, Y: 0, Z: 0},
 		SpecularExp:  0.0,
 	}
@@ -199,7 +199,12 @@ func CastRay(orig Vector, dir Vector, spheres []Sphere, lights []Light, depth in
 		shadow_pt := Vector{0, 0, 0}
 		shadow_N := Vector{0, 0, 0}
 
-		tmpmaterial := Material{}
+		tmpmaterial := Material{
+			RefractIdx:   1.0,
+			Albedo:       V4{X: 2.0, Y: 0, Z: 0, A: 0},
+			DiffuseColor: Vector{X: 0.0, Y: 0, Z: 0},
+			SpecularExp:  0.0,
+		}
 		if SceneIntersect(shadow_orig, light_dir, spheres, &shadow_pt, &shadow_N, &tmpmaterial) &&
 			(shadow_pt.Sub(shadow_orig)).Norm() < light_distance {
 			continue
@@ -225,6 +230,22 @@ func Reflect(I Vector, N Vector) Vector {
 	return I.Sub(N.MulS(2.0 * I.Dot(N)))
 }
 
+// func Refract(I Vector, N Vector, eta_t float64, eta_i float64) Vector { // Snell's law
+// 	cosi := -math.Max(-1.0, math.Min(1.0, I.Dot(N)))
+
+// 	if cosi < 0 {
+// 		return Refract(I, N.Neg(), eta_i, eta_t)
+// 	} // if the ray comes from the inside the object, swap the air and the media
+// 	eta := eta_i / eta_t
+
+// 	k := 1 - eta*eta*(1-cosi*cosi)
+// 	tmpk := Vector{1, 0, 0}
+// 	if (k < 0) == false {
+// 		tmpk = I.MulS(eta).Add(N.MulS((eta*cosi - math.Sqrt(k))))
+// 	}
+// 	return tmpk
+// }
+
 func Refract(I Vector, N Vector, eta_t float64, eta_i float64) Vector { // Snell's law
 	cosi := -math.Max(-1.0, math.Min(1.0, I.Dot(N)))
 
@@ -235,7 +256,7 @@ func Refract(I Vector, N Vector, eta_t float64, eta_i float64) Vector { // Snell
 
 	k := 1 - eta*eta*(1-cosi*cosi)
 	tmpk := Vector{1, 0, 0}
-	if (k < 0) == false {
+	if !(k < 0) {
 		tmpk = I.MulS(eta).Add(N.MulS((eta*cosi - math.Sqrt(k))))
 	}
 	return tmpk
