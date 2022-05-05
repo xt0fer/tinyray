@@ -176,11 +176,9 @@ func CastRay(orig Vector, dir Vector, spheres []Sphere, lights []Light, depth in
 	} else {
 		refract_orig = point.Add(N.MulS(1e-3))
 	}
-	//Vec3f reflect_color = cast_ray(reflect_orig, reflect_dir, spheres, lights, depth + 1);
 	reflect_color := CastRay(reflect_orig, reflect_dir, spheres, lights, depth+1)
 	refract_color := CastRay(refract_orig, refract_dir, spheres, lights, depth+1)
 
-	//return material.DiffuseColor
 	var diffuseLightIntensity float64 = 0.0
 	var specularLightIntensity float64 = 0.0
 
@@ -215,7 +213,6 @@ func CastRay(orig Vector, dir Vector, spheres []Sphere, lights []Light, depth in
 			material.SpecularExp) * lights[i].Intensity
 	}
 
-	//      return material.diffuse_color * diffuse_light_intensity * material.albedo[0] + Vec3f(1., 1., 1.)*specular_light_intensity * material.albedo[1] + reflect_color*material.albedo[2] + refract_color*material.albedo[3];
 	tcolor := material.DiffuseColor.MulS(diffuseLightIntensity).MulS(material.Albedo.X)
 	tcolor = tcolor.Add(Vector{X: 1, Y: 1, Z: 1}.MulS(specularLightIntensity * material.Albedo.Y))
 	tcolor = tcolor.Add(reflect_color.MulS(material.Albedo.Z))
@@ -227,24 +224,8 @@ func CastRay(orig Vector, dir Vector, spheres []Sphere, lights []Light, depth in
 }
 
 func Reflect(I Vector, N Vector) Vector {
-	return I.Sub(N.MulS(2.0 * I.Dot(N)))
+	return I.Sub(N.MulS(2.0).MulS(I.Dot(N)))
 }
-
-// func Refract(I Vector, N Vector, eta_t float64, eta_i float64) Vector { // Snell's law
-// 	cosi := -math.Max(-1.0, math.Min(1.0, I.Dot(N)))
-
-// 	if cosi < 0 {
-// 		return Refract(I, N.Neg(), eta_i, eta_t)
-// 	} // if the ray comes from the inside the object, swap the air and the media
-// 	eta := eta_i / eta_t
-
-// 	k := 1 - eta*eta*(1-cosi*cosi)
-// 	tmpk := Vector{1, 0, 0}
-// 	if (k < 0) == false {
-// 		tmpk = I.MulS(eta).Add(N.MulS((eta*cosi - math.Sqrt(k))))
-// 	}
-// 	return tmpk
-// }
 
 func Refract(I Vector, N Vector, eta_t float64, eta_i float64) Vector { // Snell's law
 	cosi := -math.Max(-1.0, math.Min(1.0, I.Dot(N)))

@@ -5,6 +5,7 @@ import (
 	"image/color"
 	"log"
 	"math"
+	"time"
 
 	"github.com/xt0fer/tinyray/engine"
 	"github.com/xt0fer/tinyray/vector"
@@ -13,13 +14,22 @@ import (
 const (
 	width  = 1024
 	height = 768
+	fov    = math.Pi / 2.0
 )
+
+func Pixel(i, j int, spheres []vector.Sphere, lights []vector.Light) vector.Vector {
+	dir_x := (float64(i) + 0.5) - width/2.
+	dir_y := -(float64(j) + 0.5) + height/2. // this flips the image at the same time
+	dir_z := -height / (2. * math.Tan(fov/2.))
+	return vector.CastRay(vector.Vector{X: 0, Y: 0, Z: 0},
+		vector.Vector{X: dir_x, Y: dir_y, Z: dir_z}.Normalize(), spheres, lights, 0)
+}
 
 func render(spheres []vector.Sphere, lights []vector.Light) {
 	log.Printf("render size(%d)\n", width*height)
 	framebuffer := [width * height]vector.Vector{}
-	fov := math.Pi / 2.0
 
+	start := time.Now()
 	for j := 0; j < height; j++ {
 		for i := 0; i < width; i++ {
 			// framebuffer[i+j*width] = vector.Vector{
@@ -31,13 +41,16 @@ func render(spheres []vector.Sphere, lights []vector.Light) {
 			// y := -(2*(float64(j)+0.5)/height - 1) * math.Tan(fov/2.)
 			// dir := vector.Vector{X: x, Y: y, Z: -1}.Normalize()
 			// framebuffer[i+j*width] = vector.CastRay(vector.Vector{X: 0, Y: 0, Z: 0}, dir, spheres, lights, 0)
-			dir_x := (float64(i) + 0.5) - width/2.
-			dir_y := -(float64(j) + 0.5) + height/2. // this flips the image at the same time
-			dir_z := -height / (2. * math.Tan(fov/2.))
-			framebuffer[i+j*width] = vector.CastRay(vector.Vector{X: 0, Y: 0, Z: 0},
-				vector.Vector{X: dir_x, Y: dir_y, Z: dir_z}.Normalize(), spheres, lights, 0)
+			// dir_x := (float64(i) + 0.5) - width/2.
+			// dir_y := -(float64(j) + 0.5) + height/2. // this flips the image at the same time
+			// dir_z := -height / (2. * math.Tan(fov/2.))
+			//go func(i, j int) {
+			framebuffer[i+j*width] = Pixel(i, j, spheres, lights)
+			//}(i, j)
 		}
 	}
+	elapsed := time.Since(start)
+	log.Printf("Render Loop took %s \n", elapsed)
 
 	scene := engine.NewScene(width, height)
 
