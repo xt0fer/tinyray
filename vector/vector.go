@@ -118,21 +118,20 @@ func (s *Sphere) RayIntersect(orig Vector, dir Vector, t0 *float64) bool {
 func SceneIntersect(orig Vector, dir Vector, spheres []Sphere, hit *Vector, N *Vector, material *Material) bool {
 	spheres_dist := math.MaxFloat64
 	for i := 0; i < len(spheres); i++ {
-		var distI float64 = 0.0
+		distI := 0.0
 		if spheres[i].RayIntersect(orig, dir, &distI) && distI < spheres_dist {
 			spheres_dist = distI
-			*hit = orig.Add(dir).MulS(distI)
+			*hit = orig.Add(dir.MulS(distI))
 			*N = (hit.Sub(spheres[i].Center)).Normalize()
 			*material = spheres[i].Material
 		}
 	}
-	//return spheres_dist < 1000
 
 	checkerboard_dist := math.MaxFloat64
 	if math.Abs(dir.Y) > 1e-3 {
 		d := -(orig.Y + 4) / dir.Y // the checkerboard plane has equation y = -4
 		pt := orig.Add(dir.MulS(d))
-		if d > 0 && math.Abs(pt.X) < 10 && pt.Z < -10.0 && pt.Z > -30.0 && d < spheres_dist {
+		if d > 0 && math.Abs(pt.X) < 10.0 && pt.Z < -10.0 && pt.Z > -30.0 && d < spheres_dist {
 			checkerboard_dist = d
 			*hit = pt
 			*N = Vector{X: 0, Y: 1, Z: 0}
@@ -150,6 +149,7 @@ func SceneIntersect(orig Vector, dir Vector, spheres []Sphere, hit *Vector, N *V
 func CastRay(orig Vector, dir Vector, spheres []Sphere, lights []Light, depth int) Vector {
 	point := Vector{0, 0, 0}
 	N := Vector{0, 0, 0}
+
 	material := Material{
 		RefractIdx:   1.0,
 		Albedo:       V4{X: 1.0, Y: 0, Z: 0, A: 0},
@@ -200,12 +200,13 @@ func CastRay(orig Vector, dir Vector, spheres []Sphere, lights []Light, depth in
 		shadow_N := Vector{0, 0, 0}
 
 		tmpmaterial := Material{}
-		if SceneIntersect(shadow_orig, light_dir, spheres, &shadow_pt, &shadow_N, &tmpmaterial) && (shadow_pt.Sub(shadow_orig)).Norm() < light_distance {
+		if SceneIntersect(shadow_orig, light_dir, spheres, &shadow_pt, &shadow_N, &tmpmaterial) &&
+			(shadow_pt.Sub(shadow_orig)).Norm() < light_distance {
 			continue
 		}
 		diffuseLightIntensity += lights[i].Intensity * math.Max(0, light_dir.Dot(N))
-		// specular_light_intensity += powf(std::max(0.f, -reflect(-light_dir, N)*dir), material.specular_exponent)*lights[i].intensity;
-		specularLightIntensity += math.Pow(math.Max(0.0, Reflect(light_dir, N).Dot(dir)),
+		mLightDir := light_dir.MulS(-1.0)
+		specularLightIntensity += math.Pow(math.Max(0.0, Reflect(mLightDir, N).MulS(-1.0).Dot(dir)),
 			material.SpecularExp) * lights[i].Intensity
 	}
 
@@ -234,7 +235,7 @@ func Refract(I Vector, N Vector, eta_t float64, eta_i float64) Vector { // Snell
 
 	k := 1 - eta*eta*(1-cosi*cosi)
 	tmpk := Vector{1, 0, 0}
-	if k >= 0 {
+	if (k < 0) == false {
 		tmpk = I.MulS(eta).Add(N.MulS((eta*cosi - math.Sqrt(k))))
 	}
 	return tmpk

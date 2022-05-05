@@ -105,7 +105,7 @@ func main() {
 		RefractIdx:   1.5,
 		Albedo:       vector.V4{X: 0.0, Y: 0.5, Z: 0.1, A: 0.8},
 		DiffuseColor: vector.Vector{X: 0.6, Y: 0.7, Z: 0.8},
-		SpecularExp:  125.0, //1425.0,
+		SpecularExp:  150.0, //1425.0,
 	}
 
 	// spheres.push_back(Sphere(Vec3f(-3,    0,   -16), 2,      ivory));
